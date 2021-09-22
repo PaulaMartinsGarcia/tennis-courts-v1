@@ -61,11 +61,27 @@ public class ReservationService {
         }
     }
 
+    public static BigDecimal percentage(BigDecimal base, BigDecimal pct) {
+        return base.multiply(pct).divide(new BigDecimal(100));
+    }
+
     public BigDecimal getRefundValue(Reservation reservation) {
         long hours = ChronoUnit.HOURS.between(LocalDateTime.now(), reservation.getSchedule().getStartDateTime());
 
         if (hours >= 24) {
             return reservation.getValue();
+        }
+
+        if (hours >= 12) {
+            return percentage(reservation.getValue(), new BigDecimal(25));
+        }
+
+        if (hours >= 2) {
+            return percentage(reservation.getValue(), new BigDecimal(50));
+        }
+
+        if (hours >= 0) {
+            return percentage(reservation.getValue(), new BigDecimal(75));
         }
 
         return BigDecimal.ZERO;
@@ -75,10 +91,6 @@ public class ReservationService {
             "Cannot reschedule to the same slot.*/
     public ReservationDTO rescheduleReservation(Long previousReservationId, Long scheduleId) {
         Reservation previousReservation = cancel(previousReservationId);
-
-        if (scheduleId.equals(previousReservation.getSchedule().getId())) {
-            throw new IllegalArgumentException("Cannot reschedule to the same slot.");
-        }
 
         previousReservation.setReservationStatus(ReservationStatus.RESCHEDULED);
         reservationRepository.save(previousReservation);
